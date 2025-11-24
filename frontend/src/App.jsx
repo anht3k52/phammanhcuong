@@ -85,15 +85,18 @@ export default function App() {
   const currentUrlWithToken = useMemo(() => {
     const url = new URL(window.location.href)
     url.searchParams.set('token', token)
+    url.searchParams.delete('q')
     return url.toString()
   }, [token])
 
   const applyUrlWithToken = () => {
-    // Cập nhật URL của tài liệu để Referer chứa ?token=...
-    window.history.replaceState({}, '', currentUrlWithToken)
-    // Buộc tải lại pixel để gửi request mới với Referer đã cập nhật
+    // Cập nhật URL: chỉ giữ token, bỏ q để không trộn 2 kịch bản
+    const u = new URL(window.location.href)
+    u.searchParams.set('token', token)
+    u.searchParams.delete('q')
+    window.history.replaceState({}, '', u.toString())
+    // Buộc pixel reload và refresh log
     setPixelNonce((n) => n + 1)
-    // Làm mới bảng log để dễ thấy bản ghi mới
     bump((k) => k + 1)
   }
 
@@ -168,14 +171,18 @@ export default function App() {
             <button className="btn btn-ghost" onClick={()=>{
               const u = new URL(window.location.href)
               u.searchParams.set('q', query)
+              u.searchParams.delete('token')
               window.history.replaceState({}, '', u.toString())
+              // Trigger ngay 1 request ra attacker bằng pixel để có log tức thì
+              setPixelNonce((n)=>n+1)
+              bump((k)=>k+1)
             }}>Đưa q vào URL</button>
           </div>
           <div>
             {fixActive ? (
-              <a className="link" href={attackerLanding + '?from=search'} rel="noreferrer" target="_blank">Xem thêm (no-referrer)</a>
+              <a className="link" href={attackerLanding + '?from=search'} rel="noreferrer" target="_blank" onClick={()=>setTimeout(()=>bump(k=>k+1), 800)}>Xem thêm (no-referrer)</a>
             ) : (
-              <a className="link" href={attackerLanding + '?from=search'} target="_blank" referrerPolicy="unsafe-url">Xem thêm (có thể leak)</a>
+              <a className="link" href={attackerLanding + '?from=search'} target="_blank" referrerPolicy="unsafe-url" onClick={()=>setTimeout(()=>bump(k=>k+1), 800)}>Xem thêm (có thể leak)</a>
             )}
           </div>
         </div>
