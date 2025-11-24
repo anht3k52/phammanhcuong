@@ -33,26 +33,28 @@ function LogsPanel({ refreshKey }) {
   }
   useEffect(() => { load() }, [refreshKey])
   return (
-    <div style={{border: '1px solid #ddd', padding: 12, borderRadius: 8}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <h3 style={{margin:0}}>Attacker Console (latest 200)</h3>
-        <button onClick={load}>Refresh</button>
+    <div className="card stack-8">
+      <div className="row" style={{justifyContent:'space-between'}}>
+        <div>
+          <h3 className="section-title">Attacker Console</h3>
+          <div className="muted">Hiển thị 200 request mới nhất được attacker server (cổng 4000) ghi lại.</div>
+        </div>
+        <button className="btn btn-ghost" onClick={load}>Refresh</button>
       </div>
-      <small>Shows requests captured by attacker server (port 4000). Referer column highlights leaked query params.</small>
-      <table style={{width:'100%', marginTop:8, borderCollapse:'collapse'}}>
+      <table>
         <thead>
           <tr>
-            <th style={{textAlign:'left', borderBottom:'1px solid #eee'}}>Time</th>
-            <th style={{textAlign:'left', borderBottom:'1px solid #eee'}}>Path</th>
-            <th style={{textAlign:'left', borderBottom:'1px solid #eee'}}>Referer</th>
+            <th>Time</th>
+            <th>Path</th>
+            <th>Referer</th>
           </tr>
         </thead>
         <tbody>
           {items.map((x) => (
             <tr key={x._id}>
-              <td style={{padding:'6px 4px'}}>{new Date(x.createdAt).toLocaleString()}</td>
-              <td style={{padding:'6px 4px'}}>{x.url}</td>
-              <td style={{padding:'6px 4px', maxWidth: 460, wordBreak:'break-all'}}>
+              <td>{new Date(x.createdAt).toLocaleString()}</td>
+              <td>{x.url}</td>
+              <td style={{maxWidth: 520, wordBreak:'break-all'}}>
                 <code>{x.referer || '(none)'}</code>
               </td>
             </tr>
@@ -60,6 +62,14 @@ function LogsPanel({ refreshKey }) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+function Switch({ on, onToggle }){
+  return (
+    <button aria-label="toggle fix" className={`switch ${on? 'on':''}`} onClick={onToggle}>
+      <span className="switch-handle" />
+    </button>
   )
 }
 
@@ -83,92 +93,78 @@ export default function App() {
   const attackerLanding = 'http://localhost:4000/landing'
 
   return (
-    <div style={{maxWidth: 960, margin:'20px auto', fontFamily:'Inter, system-ui, Arial'}}>
-      <h1>Referrer Policy & Privacy Demo</h1>
-      <p>
-        Mục tiêu: minh hoạ rò rỉ tham số nhạy cảm qua HTTP Referer, và cách khắc phục bằng <code>Referrer-Policy: no-referrer</code>.
-      </p>
-
-      <section style={{display:'flex', gap:12, alignItems:'center'}}>
-        <strong>Fix mode:</strong>
-        <span style={{color: fixActive ? 'green' : 'red'}}>{String(fixActive)}</span>
-        <button onClick={async ()=>{ await toggle(); bump(k=>k+1) }}>
-          {fixActive ? 'Disable fix' : 'Enable fix'}
-        </button>
-      </section>
-
-      <hr />
-
-      <section>
-        <h2>1) Magic link / reset token trong URL</h2>
-        <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <label>Token</label>
-          <input value={token} onChange={(e)=>setToken(e.target.value)} />
-          <button onClick={applyUrlWithToken}>Đưa token vào URL hiện tại</button>
-        </div>
-        <p>
-          Với token xuất hiện trong URL, nếu trang tải tài nguyên từ domain khác,
-          trình duyệt có thể gửi <code>Referer</code> chứa full URL (bao gồm token).
-        </p>
-        <div style={{display:'flex', gap:24, alignItems:'center'}}>
-          <div>
-            <p>Ảnh tải từ attacker server:</p>
-            {fixActive ? (
-              <img src={attackerPixel} alt="pixel" referrerPolicy="no-referrer" />
-            ) : (
-              <img src={attackerPixel} alt="pixel" />
-            )}
-          </div>
-          <div>
-            <p>Đi sang attacker landing:</p>
-            {fixActive ? (
-              <a href={attackerLanding} rel="noreferrer" target="_blank">Open attacker (no-referrer)</a>
-            ) : (
-              <a href={attackerLanding} target="_blank">Open attacker (leaks Referer)</a>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <hr />
-
-      <section>
-        <h2>2) Trang tìm kiếm có query nhạy cảm</h2>
-        <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <label>q</label>
-          <input value={query} onChange={(e)=>setQuery(e.target.value)} />
-          <button onClick={()=>{
-            const u = new URL(window.location.href)
-            u.searchParams.set('q', query)
-            window.history.replaceState({}, '', u.toString())
-          }}>Đưa q vào URL</button>
-        </div>
-        <p>
-          Click outbound link sẽ gửi Referer chứa <code>q</code> nếu không chặn.
-        </p>
+    <div className="container stack-12">
+      <header className="header">
         <div>
-          {fixActive ? (
-            <a href={attackerLanding + '?from=search'} rel="noreferrer" target="_blank">Xem thêm (no-referrer)</a>
-          ) : (
-            <a href={attackerLanding + '?from=search'} target="_blank">Xem thêm (có thể leak)</a>
-          )}
+          <h1 className="title">Referrer Policy & Privacy Demo</h1>
+          <p className="subtitle">Minh hoạ rò rỉ query params qua HTTP Referer và fix bằng <code>Referrer-Policy: no-referrer</code>.</p>
+        </div>
+        <div className="row">
+          <div className="badge">
+            <span className="badge-dot" style={{background: fixActive ? 'var(--success)' : 'var(--danger)'}} />
+            Fix mode: {fixActive ? 'ON' : 'OFF'}
+          </div>
+          <Switch on={fixActive} onToggle={async()=>{ await toggle(); bump(k=>k+1) }} />
+        </div>
+      </header>
+
+      <section className="grid grid-2">
+        <div className="card stack-12">
+          <h2 className="section-title">1) Magic link / reset token</h2>
+          <div className="muted">Đưa token vào URL hiện tại rồi tải tài nguyên ngoài domain để quan sát Referer.</div>
+          <div className="row">
+            <label>Token</label>
+            <input className="input" value={token} onChange={(e)=>setToken(e.target.value)} />
+            <button className="btn btn-ghost" onClick={applyUrlWithToken}>Đưa token vào URL</button>
+          </div>
+          <div className="grid">
+            <div className="stack-8">
+              <div className="muted">Ảnh 1x1 từ attacker server:</div>
+              {fixActive ? (
+                <img src={attackerPixel} alt="pixel" referrerPolicy="no-referrer" width={32} height={32} />
+              ) : (
+                <img src={attackerPixel} alt="pixel" width={32} height={32} />
+              )}
+            </div>
+            <div className="stack-8">
+              <div className="muted">Đi sang attacker landing:</div>
+              {fixActive ? (
+                <a className="link" href={attackerLanding} rel="noreferrer" target="_blank">Mở attacker (no-referrer)</a>
+              ) : (
+                <a className="link" href={attackerLanding} target="_blank">Mở attacker (có thể leak)</a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card stack-12">
+          <h2 className="section-title">2) Tìm kiếm có query nhạy cảm</h2>
+          <div className="muted">Đưa <code>q</code> vào URL, sau đó click outbound link.</div>
+          <div className="row">
+            <label>q</label>
+            <input className="input" value={query} onChange={(e)=>setQuery(e.target.value)} />
+            <button className="btn btn-ghost" onClick={()=>{
+              const u = new URL(window.location.href)
+              u.searchParams.set('q', query)
+              window.history.replaceState({}, '', u.toString())
+            }}>Đưa q vào URL</button>
+          </div>
+          <div>
+            {fixActive ? (
+              <a className="link" href={attackerLanding + '?from=search'} rel="noreferrer" target="_blank">Xem thêm (no-referrer)</a>
+            ) : (
+              <a className="link" href={attackerLanding + '?from=search'} target="_blank">Xem thêm (có thể leak)</a>
+            )}
+          </div>
         </div>
       </section>
 
-      <hr />
-
-      <section>
-        <h2>Attacker Console</h2>
+      <section className="card">
         <LogsPanel refreshKey={refreshKey} />
-        <p>
-          Trước khi fix: cột Referer sẽ hiển thị URL đầy đủ (bao gồm <code>?token=...</code> / <code>?q=...</code>).
-          Sau khi bật fix: trường Referer sẽ trống.
-        </p>
+        <div className="muted">Trước fix: Referer sẽ chứa URL đầy đủ (kể cả <code>?token=...</code> / <code>?q=...</code>). Sau fix: Referer trống.</div>
       </section>
 
-      <footer style={{marginTop: 24, color:'#666'}}>
-        Backend: <code>http://localhost:3001</code>, Attacker: <code>http://localhost:4000</code>
-      </footer>
+      <footer className="footer">Backend: <code>http://localhost:3001</code> · Attacker: <code>http://localhost:4000</code></footer>
     </div>
   )
 }
