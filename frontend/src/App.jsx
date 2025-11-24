@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+
 const API = {
-  getPolicy: async () => (await fetch('/api/policy')).json(),
+  getPolicy: async () => (await fetch(`${API_BASE}/api/policy`)).json(),
   setPolicy: async (fixActive) => (
-    await fetch('/api/policy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fixActive }) })
+    await fetch(`${API_BASE}/api/policy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fixActive }) })
   ).json(),
-  getLogs: async () => (await fetch('/api/logs')).json(),
+  getLogs: async () => (await fetch(`${API_BASE}/api/logs`)).json(),
 }
 
 function usePolicy() {
@@ -19,7 +21,7 @@ function usePolicy() {
   useEffect(() => { refresh() }, [])
   const toggle = async () => {
     const next = !fixActive
-    await API.setPolicy(next)
+    try { await API.setPolicy(next) } catch (_) { /* dev mode without backend proxy */ }
     setFixActive(next)
   }
   return { fixActive, toggle, refresh }
