@@ -1,91 +1,82 @@
-# Referrer Policy & Privacy – Demo (React + Node.js + MongoDB)
+# Referrer-Policy & Privacy Demo (React + Node.js + MongoDB)
 
-Demo tái hiện việc rò rỉ query params nhạy cảm qua HTTP Referer, và cách khắc phục bằng header `Referrer-Policy: no-referrer`.
+Minh họa rò rỉ tham số nhạy cảm qua HTTP Referer và cách khắc phục với `Referrer-Policy: no-referrer`.
 
 ## Kiến trúc
-- Frontend: React (Vite)
-- Backend: Node.js + Express
-- MongoDB: lưu log request nhận được tại “attacker server”
-- Attacker server: Express chạy cổng riêng (4000) để thu thập Referer từ trình duyệt khi tải ảnh/đi link ra ngoài
+- Frontend: React (Vite) – UI bật/tắt Fix mode, thao tác kịch bản token và q, hiển thị “Attacker Console”.
+- Backend: Express (cổng 3001) – API, phục vụ bản build, set header Referrer-Policy khi Fix ON.
+- Attacker: Express (cổng 4000) – thu thập Referer khi ảnh 1x1 tải hoặc user click outbound link; ghi Mongo.
+- MongoDB: lưu log request (collection `requestlogs`).
 
-Luồng leak:
-1) Trang React gắn dữ liệu nhạy cảm vào URL (ví dụ `?token=abc123` hoặc `?q=benh_nhay_cam`).
-2) Trang tải tài nguyên ngoài domain (ảnh 1x1 hoặc người dùng click outbound link) → trình duyệt gửi header `Referer` đến domain kia, có thể chứa full URL.
-3) Attacker server ghi lại `Referer` vào Mongo và hiển thị trong “Attacker Console”.
-
-Khắc phục:
-- Bật header `Referrer-Policy: no-referrer` cho tài liệu (document) và/hoặc dùng `rel="noreferrer"`, `referrerpolicy="no-referrer"` trên từng thẻ.
-- Trong bản build production: backend sẽ set header này tự động khi bật “Fix mode”.
-
-## Thư mục
-```
-backend/   # Express API, attacker server, Mongo models
-frontend/  # Vite React UI (Leak/Fix playground + Attacker Console)
-docker-compose.yml # MongoDB nhanh qua Docker
-```
+Sơ đồ luồng: trang có `?token=...` hoặc `?q=...` → tải ảnh/link sang attacker → trình duyệt gửi Referer → attacker ghi log → UI hiển thị.
 
 ## Yêu cầu
-- Node.js 18+
-- NPM 9+
-- MongoDB cục bộ hoặc Docker Desktop (dùng compose)
+- Node.js 18+, NPM 9+
+- MongoDB cục bộ (27017) hoặc Docker Desktop
 
-## Cách chạy (Dev)
-1) Khởi động Mongo (chọn 1):
+## Khởi chạy nhanh (Dev)
+1) MongoDB (chọn 1)
    - Docker: `docker compose up -d`
-   - Hoặc tự cài Mongo và chạy mặc định cổng 27017
+   - Hoặc Mongo cục bộ mặc định 27017
 
-2) Backend (cổng 3001) và Attacker (cổng 4000):
+2) Backend + Attacker
 ```
 cd backend
-npm install
 npm ci
-cp .env.example .env   # tuỳ chọn; sửa FIX_ACTIVE=true để bật fix ngay từ đầu
+copy .env.example .env   # PowerShell
+# (tuỳ chọn) sửa FIX_ACTIVE=true trong .env để bật fix khi chạy production
 npm run dev
 ```
 
-3) Frontend (Vite dev server, cổng 5173):
+3) Frontend (Vite)
 ```
 cd frontend
-npm install
 npm ci
 npm run dev
 ```
 
 4) Mở UI: http://localhost:5173
 
-Lưu ý: Trong chế độ dev, trang index.html do Vite phục vụ, nên header `Referrer-Policy` từ backend không áp dụng cho document này. Ta vẫn có thể demo leak/fix nhờ các thuộc tính `rel="noreferrer"` và `referrerpolicy="no-referrer"` được bật/tắt trong UI.
+Ghi chú dev:
+- Dev server của Vite phục vụ document, nên header Referrer-Policy từ backend không áp dụng cho document này.
+- Để minh họa leak rõ ràng, khi Fix OFF UI dùng `referrerPolicy="unsafe-url"` cho ảnh/link ra ngoài nhằm ép trình duyệt gửi full Referer (bao gồm query). Khi Fix ON dùng `no-referrer`/`noreferrer` để ẩn Referer.
 
-## Chạy Production build (để thấy header được backend set)
+## Production build (để thấy header backend áp dụng cho document)
 ```
 # Build frontend
 cd frontend
 npm run build
 
-# Chạy backend (phục vụ static dist/ và set header khi FIX_ACTIVE=true)
+# Start backend phục vụ dist/ và set header khi FIX_ACTIVE=true
 cd ../backend
-set FIX_ACTIVE=true  # Windows PowerShell: $env:FIX_ACTIVE="true"
+$env:FIX_ACTIVE="true"   # PowerShell; cmd: set FIX_ACTIVE=true
 npm start
 
-# Mở: http://localhost:3001
+# Mở http://localhost:3001
 ```
-Khi đó, document được trả từ backend sẽ có `Referrer-Policy: no-referrer` nếu bật fix.
 
-## Tính năng UI
-- Nút bật/tắt Fix mode: bật thì:
-  - Backend set `Referrer-Policy: no-referrer` (cho API/static khi dùng backend phục vụ).
-  - Link outbound dùng `rel="noreferrer"`.
-  - Ảnh ngoài dùng `referrerpolicy="no-referrer"`.
-- Trang “Attacker Console”: xem log các request nhận bởi attacker server và Referer tương ứng.
+## Cách dùng demo
+Trước tiên tắt Fix mode (OFF) để quan sát leak, sau đó bật lại (ON) để thấy đã chặn.
 
-## API nhanh
-- `GET /api/policy` → { fixActive }
-- `POST /api/policy` body { fixActive: boolean }
-- `GET /api/logs` → { items: RequestLog[] }
-- Attacker server:
+1) Magic link / reset token
+   - Nhập token → bấm “Đưa token vào URL” → ảnh 1x1 tự reload → xem “Attacker Console”, Referer chứa `?token=...`.
+   - Click “Mở attacker (có thể leak)” để tạo thêm log từ chuyển trang.
+
+2) Tìm kiếm với q nhạy cảm
+   - Nhập q → bấm “Đưa q vào URL” (tự xóa `token` khỏi URL để không trộn kịch bản) → ảnh 1x1 tự reload → “Attacker Console” thấy `?q=...`.
+   - Click “Xem thêm (có thể leak)” để tạo thêm log từ outbound link.
+
+Khi bật Fix mode (ON): ảnh dùng `referrerPolicy="no-referrer"` và link dùng `rel="noreferrer"` → Referer rỗng (không leak).
+
+## API
+- `GET /api/policy` → `{ fixActive: boolean }`
+- `POST /api/policy` body `{ fixActive: boolean }`
+- `GET /api/logs` → `{ items: RequestLog[] }`
+- Attacker:
   - `GET http://localhost:4000/collect.gif` → log và trả ảnh 1x1
-  - `GET http://localhost:4000/landing` → log và trả trang text
+  - `GET http://localhost:4000/landing` → log và trả HTML đơn giản
 
-## Mô hình dữ liệu (Mongo)
+## Mô hình dữ liệu
 Collection `requestlogs`:
 ```
 {
@@ -94,15 +85,24 @@ Collection `requestlogs`:
   headers: object,
   referer: string,
   ip: string,
-  policySnapshot: string, // ví dụ fixActive=true/false
+  policySnapshot: string, // ví dụ: "fixActive=true|false"
   createdAt, updatedAt
 }
 ```
 
-## Lưu ý bảo mật bổ sung
-- Tránh đưa token/PII vào URL; ưu tiên POST body, cookie httpOnly, hoặc fragment `#token` (fragment không xuất hiện trong Referer).
-- Kiểm tra bên thứ ba nhúng (analytics, chat, ads, CDN) vì chúng có thể kích hoạt request ra ngoài domain.
-- Ở production, nên cấu hình `Referrer-Policy: no-referrer` (hoặc policy phù hợp) ở web server/reverse proxy/CDN.
+## Troubleshooting
+- Chỉ thấy `http://localhost:5173` (origin) mà không thấy query?
+  - Trình duyệt mặc định `strict-origin-when-cross-origin` → chỉ gửi origin. Ở chế độ vulnerable, UI đã ép `referrerPolicy="unsafe-url"` để gửi full URL; đảm bảo Fix đang OFF.
+- Logs chưa hiện ngay sau thao tác?
+  - Nút “Đưa token/q vào URL” đã buộc ảnh 1x1 reload và auto-refresh bảng log. Với link outbound, bảng log tự refresh sau ~0.8s.
+- `npm ci` trên Windows báo EPERM unlink (file đang bị khóa):
+  - Đóng mọi dev server/IDE đang giữ `node_modules`, tắt tạm antivirus, rồi chạy lại `npm ci`.
+- Port xung đột: sửa `.env` ở backend (`PORT`, `ATTACKER_PORT`) hoặc đổi cổng Vite trong `frontend/vite.config.js`.
 
-## Giấy phép
+## Ghi chú bảo mật
+- Tránh nhét token/PII vào URL. Ưu tiên POST body, cookie httpOnly, hoặc fragment `#token` (fragment không xuất hiện trong Referer).
+- Kiểm tra script/iframe bên thứ ba (analytics, ads, chat) vì có thể kích hoạt outbound request.
+- Production: cấu hình `Referrer-Policy: no-referrer` (hoặc policy phù hợp) ở server/CDN/reverse proxy.
+
+## License
 MIT
