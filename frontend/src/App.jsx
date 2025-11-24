@@ -129,9 +129,23 @@ export default function App() {
             <div className="stack-8">
               <div className="muted">Ảnh 1x1 từ attacker server:</div>
               {fixActive ? (
-                <img key={pixelNonce} src={`${attackerPixelBase}&t=${pixelNonce}`} alt="pixel" referrerPolicy="no-referrer" width={32} height={32} />
+                <img
+                  key={pixelNonce}
+                  src={`${attackerPixelBase}&t=${pixelNonce}`}
+                  alt="pixel"
+                  referrerPolicy="no-referrer"
+                  width={32}
+                  height={32}
+                />
               ) : (
-                <img key={pixelNonce} src={`${attackerPixelBase}&t=${pixelNonce}`} alt="pixel" width={32} height={32} />
+                <img
+                  key={pixelNonce}
+                  src={`${attackerPixelBase}&t=${pixelNonce}`}
+                  alt="pixel"
+                  referrerPolicy="unsafe-url"
+                  width={32}
+                  height={32}
+                />
               )}
             </div>
             <div className="stack-8">
@@ -139,7 +153,7 @@ export default function App() {
               {fixActive ? (
                 <a className="link" href={attackerLanding} rel="noreferrer" target="_blank">Mở attacker (no-referrer)</a>
               ) : (
-                <a className="link" href={attackerLanding} target="_blank">Mở attacker (có thể leak)</a>
+                <a className="link" href={attackerLanding} target="_blank" referrerPolicy="unsafe-url">Mở attacker (có thể leak)</a>
               )}
             </div>
           </div>
@@ -161,7 +175,7 @@ export default function App() {
             {fixActive ? (
               <a className="link" href={attackerLanding + '?from=search'} rel="noreferrer" target="_blank">Xem thêm (no-referrer)</a>
             ) : (
-              <a className="link" href={attackerLanding + '?from=search'} target="_blank">Xem thêm (có thể leak)</a>
+              <a className="link" href={attackerLanding + '?from=search'} target="_blank" referrerPolicy="unsafe-url">Xem thêm (có thể leak)</a>
             )}
           </div>
         </div>
